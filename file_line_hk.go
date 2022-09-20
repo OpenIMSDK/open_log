@@ -7,7 +7,7 @@
 package log
 
 import (
-	utils "github.com/OpenIMSDK/open_utils"
+	"github.com/OpenIMSDK/open_utils"
 	"github.com/sirupsen/logrus"
 	"runtime"
 	"strings"
@@ -34,7 +34,7 @@ func (f *fileHook) Fire(entry *logrus.Entry) error {
 	_, file, line, _ := runtime.Caller(8)
 	i := strings.SplitAfter(file, "/")
 	if len(i) > 3 {
-		s = i[len(i)-3] + i[len(i)-2] + i[len(i)-1] + ":" + utils.IntToString(line)
+		s = i[len(i)-3] + i[len(i)-2] + i[len(i)-1] + ":" + open_utils.IntToString(line)
 	}
 	entry.Data["FilePath"] = s
 	return nil

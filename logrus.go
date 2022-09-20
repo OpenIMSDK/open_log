@@ -1,18 +1,14 @@
 package log
 
 import (
-	"Open_IM/pkg/common/config"
 	"bufio"
-
-	//"bufio"
 	"fmt"
-	"os"
-	"time"
-
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
+	"os"
+	"time"
 )
 
 var logger *Logger
@@ -22,20 +18,45 @@ type Logger struct {
 	Pid int
 }
 
+type Config struct {
+	StorageLocation       string
+	RotationTime          int
+	RemainRotationCount   uint
+	RemainLogLevel        uint
+	ElasticSearchSwitch   bool
+	ElasticSearchAddr     []string
+	ElasticSearchUser     string
+	ElasticSearchPassword string
+}
+
+var configDefault = Config{StorageLocation: "../logs/", RotationTime: 24, RemainRotationCount: 2, RemainLogLevel: 6}
+
 func init() {
 	logger = loggerInit("")
 
 }
-func NewPrivateLog(moduleName string) {
+func NewPrivateLog(moduleName string, storageLocation string, rotationTime int, remainRotationCount uint, remainLogLevel uint) {
+	if storageLocation != "" {
+		configDefault.StorageLocation = storageLocation
+	}
+	if rotationTime != 0 {
+		configDefault.RotationTime = rotationTime
+	}
+	if remainRotationCount != 0 {
+		configDefault.RemainRotationCount = remainRotationCount
+	}
+	if remainLogLevel != 0 {
+		configDefault.RemainLogLevel = remainLogLevel
+	}
+
 	logger = loggerInit(moduleName)
 }
 
 func loggerInit(moduleName string) *Logger {
 	var logger = logrus.New()
 	//All logs will be printed
-	logger.SetLevel(logrus.Level(config.Config.Log.RemainLogLevel))
+	logger.SetLevel(logrus.Level(configDefault.RemainLogLevel))
 	//Close std console output
-	//os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	src, err := os.OpenFile(os.DevNull, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(err.Error())
@@ -52,12 +73,8 @@ func loggerInit(moduleName string) *Logger {
 	//File name and line number display hook
 	logger.AddHook(newFileHook())
 
-	//Send logs to elasticsearch hook
-	if config.Config.Log.ElasticSearchSwitch {
-		logger.AddHook(newEsHook(moduleName))
-	}
 	//Log file segmentation hook
-	hook := NewLfsHook(time.Duration(config.Config.Log.RotationTime)*time.Hour, config.Config.Log.RemainRotationCount, moduleName)
+	hook := NewLfsHook(time.Duration(configDefault.RotationTime)*time.Hour, configDefault.RemainRotationCount, moduleName)
 	logger.AddHook(hook)
 	return &Logger{
 		logger,
@@ -82,7 +99,7 @@ func initRotateLogs(rotationTime time.Duration, maxRemainNum uint, level string,
 		moduleName = moduleName + "."
 	}
 	writer, err := rotatelogs.New(
-		config.Config.Log.StorageLocation+moduleName+level+"."+"%Y-%m-%d",
+		configDefault.StorageLocation+moduleName+level+"."+"%Y-%m-%d",
 		rotatelogs.WithRotationTime(rotationTime),
 		rotatelogs.WithRotationCount(maxRemainNum),
 	)
